@@ -260,6 +260,10 @@
   </div>
 </div>
 
+<!-- PDF generation libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <script>
 // ═══════════════════════════════════════════════════════════
 //  TRANSLATIONS
@@ -750,24 +754,85 @@ function downloadPDF() {
   var s      = collect();
   var client = s.h.clientName ? s.h.clientName.replace(/\s+/g,'_') : 'Client';
   var dt     = s.h.installDate ? s.h.installDate.replace(/-/g,'') : 'date';
-  var fname  = 'Acceptance_Report_' + client + '_' + dt;
+  var fname  = 'Acceptance_Report_' + client + '_' + dt + '.pdf';
 
+  var btn = document.getElementById('btn-generate');
+  var originalLabel = btn.textContent;
+
+  // Fallback to print dialog if libraries failed to load
+  if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
+    printFallback(fname);
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = (LANG === 'zh' ? '正在生成 PDF…' : 'Generating PDF…');
+
+  // Render report off-screen so html2canvas can measure it
+  var holder = document.getElementById('__pdfHolder');
+  if (holder) holder.remove();
+  holder = document.createElement('div');
+  holder.id = '__pdfHolder';
+  holder.style.cssText = 'position:absolute;left:-10000px;top:0;width:8.5in;background:#fff;z-index:-1;';
+  holder.innerHTML = buildReport();
+  document.body.appendChild(holder);
+
+  // Neutralize screen-only styling
+  var pages = holder.querySelectorAll('.page');
+  for (var i = 0; i < pages.length; i++) {
+    pages[i].style.margin    = '0';
+    pages[i].style.boxShadow = 'none';
+    pages[i].style.background= '#fff';
+  }
+
+  var jsPDFCtor = window.jspdf.jsPDF;
+  var pdf = new jsPDFCtor({ unit:'in', format:'letter', orientation:'portrait' });
+
+  var idx = 0;
+  function nextPage() {
+    if (idx >= pages.length) {
+      pdf.save(fname);
+      holder.remove();
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+      return;
+    }
+    html2canvas(pages[idx], {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      logging: false,
+      windowWidth: pages[idx].scrollWidth,
+      windowHeight: pages[idx].scrollHeight
+    }).then(function(canvas) {
+      var img = canvas.toDataURL('image/jpeg', 0.94);
+      if (idx > 0) pdf.addPage();
+      pdf.addImage(img, 'JPEG', 0, 0, 8.5, 11);
+      idx++;
+      nextPage();
+    }).catch(function(err) {
+      console.error('PDF generation error:', err);
+      holder.remove();
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+      printFallback(fname);
+    });
+  }
+  nextPage();
+}
+
+// Fallback: open browser print dialog (user picks "Save as PDF")
+function printFallback(fname) {
   var fullHTML = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + fname +
     '</title><style>' + PRINT_CSS + '</style></head><body>' + buildReport() + '</body></html>';
-
-  // Remove any existing print frame
   var old = document.getElementById('__printFrame');
   if (old) old.remove();
-
   var iframe = document.createElement('iframe');
   iframe.id = '__printFrame';
   iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:0;opacity:0;';
   document.body.appendChild(iframe);
-
   var doc = iframe.contentDocument || iframe.contentWindow.document;
   doc.open(); doc.write(fullHTML); doc.close();
-
-  // Wait for images (base64 so fast) then print
   iframe.onload = function() {
     setTimeout(function() {
       iframe.contentWindow.focus();
