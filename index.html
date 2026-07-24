@@ -714,62 +714,65 @@ function generateAndDownload() {
   downloadPDF();
 }
 
+var PRINT_CSS = [
+  'body{margin:0;padding:0;background:#fff;font-family:Calibri,Arial,"Microsoft YaHei",sans-serif}',
+  'img{max-width:100%}',
+  '.page{width:8.5in;min-height:11in;padding:0.45in 0.55in;position:relative;color:#1A1A1A;page-break-after:always;box-sizing:border-box}',
+  '.page:last-child{page-break-after:auto}',
+  '.page *{-webkit-print-color-adjust:exact;print-color-adjust:exact}',
+  '.r-logo{display:block;height:0.68in;margin:0 auto 8px}',
+  '.r-title{text-align:center;font-size:21px;font-weight:800;margin:6px 0 2px;letter-spacing:.3px}',
+  '.r-sub{text-align:center;font-style:italic;color:#5A5A5A;font-size:11.5px;margin:0 0 14px}',
+  'table.rt{width:100%;border-collapse:collapse;font-size:9pt}',
+  'table.rt td,table.rt th{border:1px solid #B0B0B0;padding:5px 7px;vertical-align:middle}',
+  'table.rt th{background:#1A1A1A;color:#fff;font-weight:700;text-align:center;font-size:9pt}',
+  '.rt .lbl{background:#E8E8E8;font-weight:700;width:24%}',
+  '.rt .ctr{text-align:center}',
+  '.rt ul{margin:3px 0 0 15px;padding:0}.rt li{margin:1px 0}',
+  '.diag{display:block;margin:0 auto;max-height:1.1in}',
+  '.blank-cell{background:#fafafa}.result-cell{background:#fafafa;min-width:80px}',
+  '.r-sech{margin:12px 0 7px;padding-bottom:4px;border-bottom:2.5px solid #C00000;font-size:13.5px;font-weight:800}',
+  '.r-sech .rn{color:#C00000;margin-right:5px}',
+  '.r-note{font-style:italic;color:#5A5A5A;font-size:8.5pt;margin-top:10px}',
+  'table.sig{width:100%;border-collapse:collapse;margin-top:14px}',
+  'table.sig td{border:1px solid #B0B0B0;padding:10px 12px;vertical-align:top}',
+  'table.sig.two td{width:50%}table.sig.three td{width:33.33%}',
+  '.sig-role{font-weight:700;font-size:9pt;margin-bottom:6px}',
+  '.sig-line{border-bottom:1px solid #333;height:28px;margin-bottom:4px;position:relative}',
+  '.sig-auto{font-family:"Segoe Script","Bradley Hand","Brush Script MT",cursive;font-size:20px;color:#0b2e6b;position:absolute;bottom:2px;left:4px;white-space:nowrap}',
+  '.sig-cap{font-size:7.5pt;color:#666}.sig-date{font-size:9pt;margin-top:5px}',
+  '.r-foot{position:absolute;left:0.55in;right:0.55in;bottom:0.38in;border-top:1px solid #CCC;padding-top:4px;display:flex;justify-content:space-between;font-size:7.5pt;color:#666}',
+  '@page{size:Letter;margin:0}',
+  '@media print{body{background:#fff}.page{page-break-after:always}.page:last-child{page-break-after:auto}}'
+].join('');
+
 function downloadPDF() {
-  // Build a self-contained print window and trigger Save As PDF
   var s      = collect();
   var client = s.h.clientName ? s.h.clientName.replace(/\s+/g,'_') : 'Client';
   var dt     = s.h.installDate ? s.h.installDate.replace(/-/g,'') : 'date';
-  var fname  = 'Acceptance_Report_'+client+'_'+dt;
+  var fname  = 'Acceptance_Report_' + client + '_' + dt;
 
-  var reportHTML = buildReport();
+  var fullHTML = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + fname +
+    '</title><style>' + PRINT_CSS + '</style></head><body>' + buildReport() + '</body></html>';
 
-  var printWin = window.open('','_blank','width=1000,height=800');
-  if (!printWin) { alert('Please allow popups to download the PDF.'); return; }
+  // Remove any existing print frame
+  var old = document.getElementById('__printFrame');
+  if (old) old.remove();
 
-  printWin.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">'+
-    '<title>'+fname+'</title>'+
-    '<style>' +
-    'body{margin:0;padding:0;background:#fff;font-family:Calibri,Arial,"Microsoft YaHei",sans-serif}' +
-    'img{max-width:100%}' +
-    '.page{width:8.5in;min-height:11in;padding:0.45in 0.55in;position:relative;' +
-          'color:#1A1A1A;page-break-after:always;box-sizing:border-box}' +
-    '.page:last-child{page-break-after:auto}' +
-    '.page *{-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
-    '.r-logo{display:block;height:0.68in;margin:0 auto 8px}' +
-    '.r-title{text-align:center;font-size:21px;font-weight:800;margin:6px 0 2px;letter-spacing:.3px}' +
-    '.r-sub{text-align:center;font-style:italic;color:#5A5A5A;font-size:11.5px;margin:0 0 14px}' +
-    'table.rt{width:100%;border-collapse:collapse;font-size:9pt}' +
-    'table.rt td,table.rt th{border:1px solid #B0B0B0;padding:5px 7px;vertical-align:middle}' +
-    'table.rt th{background:#1A1A1A;color:#fff;font-weight:700;text-align:center;font-size:9pt}' +
-    '.rt .lbl{background:#E8E8E8;font-weight:700;width:24%}' +
-    '.rt .ctr{text-align:center}' +
-    '.rt ul{margin:3px 0 0 15px;padding:0}.rt li{margin:1px 0}' +
-    '.diag{display:block;margin:0 auto;max-height:1.1in}' +
-    '.blank-cell{background:#fafafa}.result-cell{background:#fafafa;min-width:80px}' +
-    '.r-sech{margin:12px 0 7px;padding-bottom:4px;border-bottom:2.5px solid #C00000;font-size:13.5px;font-weight:800}' +
-    '.r-sech .rn{color:#C00000;margin-right:5px}' +
-    '.r-note{font-style:italic;color:#5A5A5A;font-size:8.5pt;margin-top:10px}' +
-    'table.sig{width:100%;border-collapse:collapse;margin-top:14px}' +
-    'table.sig td{border:1px solid #B0B0B0;padding:10px 12px;vertical-align:top}' +
-    'table.sig.two td{width:50%}table.sig.three td{width:33.33%}' +
-    '.sig-role{font-weight:700;font-size:9pt;margin-bottom:6px}' +
-    '.sig-line{border-bottom:1px solid #333;height:28px;margin-bottom:4px;position:relative}' +
-    '.sig-auto{font-family:"Segoe Script","Bradley Hand","Brush Script MT",cursive;' +
-              'font-size:20px;color:#0b2e6b;position:absolute;bottom:2px;left:4px;white-space:nowrap}' +
-    '.sig-cap{font-size:7.5pt;color:#666}.sig-date{font-size:9pt;margin-top:5px}' +
-    '.r-foot{position:absolute;left:0.55in;right:0.55in;bottom:0.38in;' +
-            'border-top:1px solid #CCC;padding-top:4px;' +
-            'display:flex;justify-content:space-between;font-size:7.5pt;color:#666}' +
-    '@page{size:Letter;margin:0}' +
-    '@media print{body{background:#fff}.page{page-break-after:always}.page:last-child{page-break-after:auto}}' +
-    '</style></head><body>'+reportHTML+'</body></html>');
-  printWin.document.close();
+  var iframe = document.createElement('iframe');
+  iframe.id = '__printFrame';
+  iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:0;opacity:0;';
+  document.body.appendChild(iframe);
 
-  printWin.onload = function(){
-    setTimeout(function(){
-      printWin.focus();
-      printWin.print();
-    }, 600);
+  var doc = iframe.contentDocument || iframe.contentWindow.document;
+  doc.open(); doc.write(fullHTML); doc.close();
+
+  // Wait for images (base64 so fast) then print
+  iframe.onload = function() {
+    setTimeout(function() {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    }, 400);
   };
 }
 
